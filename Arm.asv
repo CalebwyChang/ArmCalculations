@@ -15,11 +15,10 @@ classdef Arm < handle
     end
 
     methods
-        function obj = Arm(theta, len, p_COM, mass)
+        function obj = Arm(theta, len, mass)
             obj.theta = theta;
             obj.theta(1) = obj.theta(1)-pi/2;
             obj.len = len;
-            obj.p = p_COM;
             obj.mass = mass;
             
         end

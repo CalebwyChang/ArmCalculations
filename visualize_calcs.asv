@@ -2,11 +2,8 @@ clear;
 close all
 
 % change these angles to configure arm placement
-theta = [pi/2,0];
-len = [1, 1];
-p_COM = [0.5, 0.5];
-mass = [3, 2];
-arm = Arm(theta, len, p_COM, mass);
+theta = 
+arm = Arm(theta, len, mass, );
 
 g_uCOM = Arm.get_config(arm.origin_shoulder()*arm.shoulder_uCOM());
 g_fCOM = Arm.get_config(arm.origin_shoulder()*arm.shoulder_elbow()*arm.elbow_fCOM());
@@ -14,7 +11,7 @@ Tq = arm.get_Tq();
 a_u = atan2(g_uCOM(2),g_uCOM(1));
 a_f = atan2(g_fCOM(2),g_fCOM(1));
 
-planarR2_display(arm.theta, arm.len); hold on
+planarR2_display(arm.theta, [arm.l1, arm.l2]); hold on
 
 s = 0.07; % scale torque dimension
 plot(g_uCOM(1),g_uCOM(2),'*r')
