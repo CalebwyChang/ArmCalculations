@@ -73,7 +73,69 @@ classdef Arm < handle
             d = [norm(g1(1:2)), norm(g2(1:2))];
             phi = [atan2(g1(2),g1(1)), atan2(g2(2),g2(1))];
             Tq = Fg.*d.*cos(phi);
+        end
 
+        function T_elbow_support = elbow_support(~, c)
+            T_elbow_support = eye(3);
+            T_elbow_support(1:2,3) = [c;0];
+        end
+        % supporting force c meters away from elbow
+        function opt_f = get_support(obj, c)
+            T_elbow_support = obj.elbow_support(c);
+            T_origin_support = obj.origin_shoulder()*obj.shoulder_elbow()*T_elbow_support;
+            g_support = Arm.get_config(T_origin_support);
+            r = norm(g_support(1:2));
+            phi = atan2(g_support(2), g_support(1));
+
+            net_Torque = sum(obj.get_Tq());
+            F_support_torque = net_Torque/r;
+            a_support_torque = phi+pi/2;
+
+            F_support_y = sum(obj.get_Fg());
+
+            F_support = F_support_torque*[cos(a_support_torque); sin(a_support_torque); 0];
+
+            r_vec = [g_support(1); g_support(2); 0];
+
+            fun = @(f)norm(sum(cross(r_vec, f))-net_Torque)^2;
+            Aeq = [0,0,1;
+                   0,1,0];
+            beq = [0;
+                   F_support_y];
+
+            opt_f = fmincon(fun, F_support, [],[], Aeq, beq);
+            T = cross(r_vec,opt_f);
+
+        end
+        function show(arm, support_distance)
+            s_T = 0.02 ; % scale torque dimension
+            s_F = 0.01; % scale gravity force dimension
+            s_S = 0.005; % scale supporting force dimension
+            g_uCOM = Arm.get_config(arm.origin_shoulder()*arm.shoulder_uCOM());
+            g_fCOM = Arm.get_config(arm.origin_shoulder()*arm.shoulder_elbow()*arm.elbow_fCOM());
+            g_support = Arm.get_config(arm.origin_shoulder()*arm.shoulder_elbow()*arm.elbow_support(support_distance));
+            
+            Tq = arm.get_Tq();
+            Fg = arm.get_Fg();
+            F_support = arm.get_support(support_distance);
+            
+            a_u = atan2(g_uCOM(2),g_uCOM(1));
+            a_f = atan2(g_fCOM(2),g_fCOM(1));
+            
+            planarR2_display(arm.theta, arm.len); hold on
+            plot(g_uCOM(1),g_uCOM(2),'*r')
+            plot(g_fCOM(1),g_fCOM(2),'*r')
+            plot(g_support(1),g_support(2),'*g')
+            
+            quiver(g_uCOM(1), g_uCOM(2), s_T*Tq(1)*sin(a_u), s_T*-Tq(1)*cos(a_u), 'Color', [1,0,0]);
+            quiver(g_fCOM(1), g_fCOM(2), s_T*Tq(2)*sin(a_f), s_T*-Tq(2)*cos(a_f), 'Color', [1,0,0]);
+            quiver(g_uCOM(1), g_uCOM(2), 0, -s_F*Fg(1), 'Color', [0,0,1]);
+            quiver(g_fCOM(1), g_fCOM(2), 0, -s_F*Fg(2), 'Color', [0,0,1]);
+            
+            dir_support = s_S*F_support;
+            quiver(g_support(1), g_support(2), dir_support(1),dir_support(2), 'Color', [0,1,0]);
+            
+            title(['Net Force: ' num2str(sum(arm.get_Fg())) 'N, Net Torque: ' num2str(sum(arm.get_Tq())) 'Nm'])
         end
     end
 
