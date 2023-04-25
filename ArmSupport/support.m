@@ -7,7 +7,7 @@ syms theta real
 % linkage links in inches, distance returned is in inches
 l1 = 11;
 l2 = 3;
-d(theta) = sqrt(l1^2+l2^2-2*l1*l2*cosd(90-theta));
+d(theta) = sqrt(l1^2+l2^2 - 2*l1*l2*cosd(90-theta));
 
 tt = -75:75; % max angle from -75 to 75
 figure;
@@ -17,71 +17,67 @@ xlabel('Angle (degrees)')
 ylabel('Distance (in)')
 title('Spring Distance with respect to 4-bar linkage angle')
 
-%% Determine Spring Constant Parameter
-% 2.25 inches resting
-% 3.00 inches 7.5 lb weight
-% 4.00 inches 15 lb weight
-x1 = 2.25;
-x2 = [x1, 3, 4];
-F = [0, 7.5, 15]*0.453592; % convert pounds to kilograms (kg)
-delta_x = (x2-x1)*0.0254; % convert inches to meters (m)
-k = F/delta_x; % estimated spring constant of individual spring
+%% Determine Spring Constant Parameters
+F_test = [34.5/16; 34.5/16+1.25; 7.5; 15]; % in pounds
+delta_x = [5/16; 1; 2+5/16; 5+5/8]; % in inches
+x = [delta_x,  ones(length(delta_x),1)];
+k = x\F_test % estimated spring constant of individual spring
+
 figure;
 hold on
-plot(delta_x, F, '*r');
-plot(delta_x, k.*delta_x, 'b')
-xlabel('Displacement (m)')
-ylabel('Force (N)')
-title(['Spring Force of Individual Spring, k=' num2str(k)]);
+plot(delta_x, F_test, '*r');
+plot(delta_x, x*k, 'b')
+xlabel('Displacement (in)')
+ylabel('Force (lbs)')
+title('Spring System Force Plot');
 
 %% Supporting Magnitude Spring Force 
 % equivalent spring constant of 3 springs in series as used in OmoSling
-k_eq = k/3; % 1(1/k+1/k+1/k)
+k_eq = k;
+% k_eq(1) = 17; %7*k(1);
 % assumption: we can choose the inital distance of the spring before
 % stretching since it is dependent on the motor wind up. For these
 % calculations, we will assume that the initial distance occurs when the
 % 4-bar linkage is in its most up-right position (theta=75)
-x1 = d(75); 
-delta_x = abs(d(tt)-x1);
-delta_x = delta_x*0.0254; % convert to m
+delta_x = d(tt)-d(75);
+x = [delta_x',  ones(length(delta_x),1)];
+F = x*k_eq;
+F = F';
 figure;
-yyaxis left
-plot(tt, delta_x.*k_eq)
-ylim([0,max(double(delta_x.*k_eq))])
+plot(tt, F)
+ylim([0,max(double(F))])
 xticks(-75:15:75)
 xlabel('Angle (degrees)')
-ylabel('Force (N)')
-title('Magnitude of Spring Force')
-grid on
-yyaxis right
-plot(tt, delta_x.*k_eq*0.2248)
-ylim([0,max(double(delta_x.*k_eq*0.2248))])
-ylabel('Pound-Force (lbs)')
+ylabel('Force (lbs)')
+title('Magnitude of Spring System Force')
 
 %% Find Torque at each position
-gamma = acosd((l1^2+d(tt).^2-l2^3)./(2*l1*d(tt)));
+gamma = acosd((l1^2+d(tt).^2-l2^2)./(2*l1*d(tt)));
 r = l1;
-F = delta_x.*k_eq;
 T = r*F.*sind(gamma);
 figure;
+% nexttile;
+% plot(tt, gamma)
+% xlabel('theta')
+% ylabel('Gamma')
+% title('Gamma Plot')
+% nexttile;
+% plot(tt, sind(gamma))
+% xlabel('theta')
+% ylabel('sin(Gamma)')
+% title('sin(Gamma) Plot')
+% nexttile;
 plot(tt, T)
 xticks(-75:15:75)
 xlabel('Angle (degrees)')
-ylabel('Torque (Nm)')
-title('Torque Provided by Spring')
+ylabel('Torque (lbs-in)')
+title('Torque Provided by Spring System')
 
 %% Find support Upward Force
-l3 = 9;
-alpha = 180-tt;
-r_support = sqrt(l1^2+l3^2-2*l1*l3*cosd(alpha));
-zeta = asind(l1*sind(alpha)./r_support);
-delta = 90-zeta;
-r_support = r_support*0.0254; % convert to meters
-F_support = T./r_support;
-Fy = F_support./sind(delta);
+Fy = T/l1./sind(90-tt);
 figure;
-plot(tt, Fy*0.2248) % convert to pound-force
+plot(tt, Fy) 
 xticks(-75:15:75)
 xlabel('Angle (degrees)')
-ylabel('Pound-Force (lbs)')
+ylabel('Force (lbs)')
 title('Vertical Support Provided at Arm Trough')
